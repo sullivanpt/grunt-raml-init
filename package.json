@@ -1,0 +1,14 @@
+{
+  "name": "grunt-raml-init",
+  "version": "0.1.0",
+  "description": "Quick start for your RAML designs!",
+  "author": {
+    "name": "Alvaro Cabrera",
+    "email": "pateketrueke@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "raml-parser": "^0.8.7",
+    "tv4": "^1.1.0"
+  }
+}
