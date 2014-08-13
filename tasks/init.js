@@ -23,7 +23,11 @@ module.exports = function(grunt) {
         grunt.log.writeln('Validating schemas: ' + data.title + ' v' + data.version);
 
         _.each(extractSchemas(data, []), function(schema) {
-          validate(schema);
+          validate(schema, function() {
+            setTimeout(function() {
+              done();
+            }, 100);
+          });
         });
       }, function(err) {
         errorHandler(err);
@@ -34,7 +38,7 @@ module.exports = function(grunt) {
         grunt.log.error(err);
       }
 
-      cb(!err);
+      cb(err ? false : null);
     });
 
     grunt.file.expand(options.schema_src).forEach(function(file) {
@@ -91,7 +95,7 @@ module.exports = function(grunt) {
       grunt.log.error('Message: ' + err.message);
     }
 
-    function validate(params) {
+    function validate(params, next) {
       tv4.validateAsync(params.example, params.schema, function(result) {
         grunt.log.writeln(params.method, params.path);
 
@@ -113,6 +117,8 @@ module.exports = function(grunt) {
             grunt.log.error('Missing schema for ' + set);
           });
         }
+
+        next();
       });
     }
 
