@@ -33,8 +33,24 @@ module.exports = function(grunt) {
 - **schema_root** (string)
   Base URI for local schemas
 
+  If given, all local schemas will be registered under that domain using its `schema-id`, then use:
+
+  ```json
+  "property": { "$ref": "http://domain.com/schema/id" }
+  ```
+
+  Note that **schema_output** has precedence over **schema_root**
+
 - **schema_output** (string)
   Directory for saving local schemas
+
+  If given, all local schemas will be saved to this location using its `schema-id`, then use:
+
+  ```json
+  "property": { "$ref": "http://localhost:8000/schema/id.json" }
+  ```
+
+  For this you're required to serve the schemas using a local web-server.
 
 ## Best practices
 
