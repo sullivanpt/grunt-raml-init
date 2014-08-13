@@ -10,7 +10,9 @@ module.exports = function(grunt) {
     tv4.validateAsync = require('../lib/tv4-async');
 
     var raml_files = [],
-        options = this.options();
+        options = this.options({
+          timeout: false
+        });
 
     this.files.forEach(function(set) {
       set.src.forEach(function(file) {
@@ -24,9 +26,13 @@ module.exports = function(grunt) {
 
         _.each(extractSchemas(data, []), function(schema) {
           validate(schema, function() {
-            setTimeout(function() {
+            if (options.timeout > 0) {
+              setTimeout(function() {
+                done();
+              }, options.timeout);
+            } else {
               done();
-            }, 100);
+            }
           });
         });
       }, function(err) {
