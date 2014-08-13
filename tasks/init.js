@@ -182,15 +182,18 @@ module.exports = function(grunt) {
     // - extract all $ref's and download
     // - validate everything!
 
-    subtasks.push(saveSchemas());
+    if (!this.filesSrc.length) {
+      grunt.log.error('Missing RAML files!');
+      finish(false);
+    } else {
+      subtasks.push(saveSchemas());
 
-    this.files.forEach(function(set) {
-      set.src.forEach(function(file) {
+      this.filesSrc.forEach(function(file) {
         subtasks.push(processRaml(file));
       });
-    });
 
-    runTasks(subtasks, finish);
+      runTasks(subtasks, finish);
+    }
 
   });
 };
