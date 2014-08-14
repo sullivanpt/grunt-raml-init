@@ -10,5 +10,8 @@
   "dependencies": {
     "raml-parser": "^0.8.7",
     "tv4": "^1.1.0"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5"
   }
 }
