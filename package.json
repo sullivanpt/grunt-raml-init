@@ -1,6 +1,6 @@
 {
   "name": "grunt-raml-init",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Quick start for your RAML designs!",
   "author": {
     "name": "Alvaro Cabrera",
