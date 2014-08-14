@@ -11,6 +11,14 @@ module.exports = function(grunt) {
         options = this.options(),
         finish = this.async();
 
+    function parse(data, label) {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        throw new Error('invalid JSON for ' + label + '\n' + e + '\n' + data);
+      }
+    }
+
     function runTasks(all, done) {
       grunt.util.async.forEach(all, function(task, callback) {
         return task(callback);
@@ -29,7 +37,7 @@ module.exports = function(grunt) {
           var schema = grunt.file.readJSON(file);
 
           if (!schema.id) {
-            throw new Error('Missing id for ' + file);
+            throw new Error('missing id for ' + file);
           } else {
             if (options.schema_output) {
               grunt.file.copy(file, path.resolve(options.schema_output + '/' + schema.id + '.json'));
@@ -46,24 +54,25 @@ module.exports = function(grunt) {
     function processRaml(file) {
       return function(next) {
         raml.loadFile(file).then(function(data) {
-          grunt.log.writeln('Validating schemas: ' + data.title + ' v' + data.version);
+          grunt.log.writeln('Validating schemas for ' + data.title + ' v' + data.version);
 
-          var subtasks = [],
-              schemas = extractSchemas(data, []);
+          try {
+            var subtasks = [],
+                schemas = extractSchemas(data, []);
 
-          schemas.forEach(function(params) {
-            subtasks.push(downloadSchemas(extractRefs(params.schema)));
-          });
+            schemas.forEach(function(params) {
+              subtasks.push(downloadSchemas(extractRefs(params.schema)));
+            });
 
-          runTasks(subtasks, function() {
-            schemas.forEach(validate);
-            next();
-          });
+            runTasks(subtasks, function() {
+              schemas.forEach(validate);
+              next();
+            });
+          } catch (e) {
+            next(e);
+          }
         }, function(err) {
-          grunt.log.error('Error in ' + err.problem_mark.name + ' line=' + err.problem_mark.line + ' column=' + err.problem_mark.column);
-          grunt.log.error('Message: ' + err.message);
-
-          next(err);
+          next('Error: ' + err);
         });
       };
     }
@@ -88,7 +97,7 @@ module.exports = function(grunt) {
 
       if (result.missing.length) {
         result.missing.forEach(function(set) {
-          grunt.log.error('Missing schema for ' + set);
+          grunt.log.error('missing schema for ' + set);
         });
       }
     }
@@ -112,23 +121,54 @@ module.exports = function(grunt) {
     function extractSchemas(schema, parent) {
       var retval = [];
 
-      schema.resources.forEach(function(resource) {
-        var parts = parent.concat([resource.relativeUri]);
+      if (!schema.resources) {
+        throw new Error('no resources given' + (parent.length ? ' for ' + parent.join('') : ''));
+      }
+
+      _.each(schema.resources, function(resource) {
+        var parts = parent.concat([resource.relativeUri]),
+            route = parts.join('');
+
+        if (!resource.methods) {
+          throw new Error('no methods given for ' + route);
+        }
 
         _.each(resource.methods, function(method) {
+          var request = method.method.toUpperCase() + ' ' + route;
+
+          if (!method.responses) {
+            throw new Error('no responses given for ' + request);
+          }
+
           _.each(method.responses, function(response, status) {
+            var result = 'on ' + request + ' [statusCode: ' + status + ']';
+
+            if (!response) {
+              throw new Error('missing response for ' + result);
+            }
+
+            if (!response.body) {
+              throw new Error('missing body for ' + result);
+            }
+
             _.each(response.body, function(body, type) {
+              var output = result + ' [Content-Type: ' + type + ']';
+
+              if (!body) {
+                throw new Error('missing body for ' + output);
+              }
+
               if (!body.schema) {
-                throw new Error('Missing schema for ' + parts.join(''));
+                throw new Error('missing schema for ' + output);
               }
 
               if (!body.example) {
-                throw new Error('Missing example for schema in ' + parts.join(''));
+                throw new Error('missing example for ' + output);
               }
 
               retval.push({
-                schema: JSON.parse(body.schema),
-                example: JSON.parse(body.example),
+                schema: parse(body.schema, 'schema ' + output),
+                example: parse(body.example, 'example ' + output),
                 method: method.method.toUpperCase(),
                 path: parts.join('')
               });
@@ -158,16 +198,12 @@ module.exports = function(grunt) {
               });
 
               res.on('end', function() {
-                try {
-                  tv4.addSchema(url, JSON.parse(body));
-                  next();
-                } catch (e) {
-                  next(e + '\n' + body);
-                }
+                tv4.addSchema(url, parse(body, url));
+                next();
               });
 
             }).on('error', function(err) {
-              next('Cannot reach ' + url);
+              next('cannot reach ' + url);
             });
           });
         });
@@ -183,7 +219,7 @@ module.exports = function(grunt) {
     // - validate everything!
 
     if (!this.filesSrc.length) {
-      grunt.log.error('Missing RAML files!');
+      grunt.log.error('missing RAML files!');
       finish(false);
     } else {
       subtasks.push(saveSchemas());
