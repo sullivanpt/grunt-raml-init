@@ -10,7 +10,6 @@ module.exports = function(grunt) {
       api: {
         src: ['src/index.raml'],
         options: {
-          schema_src: ['src/**/schema.json'],
           schema_root: 'http://domain.com/schema',
           schema_output: 'generated/schema'
         }
@@ -25,39 +24,40 @@ module.exports = function(grunt) {
 ## Options
 
 - **src** (array|string)
+
   RAML files to parse
 
-- **schema_src** (array|string)
-  JSON-schema sources
-
 - **schema_root** (string)
+
   Base URI for local schemas
 
   If given, all local schemas will be registered under that domain using its `schema-id`, then use:
 
   ```json
-  "property": { "$ref": "http://domain.com/schema/id" }
+  { "$ref": "http://domain.com/schema/id" }
   ```
 
   Note that **schema_output** has precedence over **schema_root**
 
 - **schema_output** (string)
+
   Directory for saving local schemas
 
   If given, all local schemas will be saved to this location using its `schema-id`, then use:
 
   ```json
-  "property": { "$ref": "http://localhost:8000/schema/id.json" }
+  { "$ref": "http://localhost:8000/schema/id.json" }
   ```
 
   For this you're required to serve the schemas using a local web-server.
 
 ## Best practices
 
-**tl; dr** --- Take a look to the provided `example` directory.
+**tl; dr** &mdash; Take a look to the provided `example` directory.
 
 - Split and organize all RAML definitions on separated files
 - Place your `json-schema` with their examples on separated files
+- All `json-schema` required must have an `id` to validate them well
 
 ## Build status
 
