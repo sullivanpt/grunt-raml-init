@@ -31,6 +31,30 @@ module.exports = function(grunt) {
       });
     }
 
+    function addSchema(json, label) {
+      var schema = parse(json, label);
+
+      if (!schema.id) {
+        throw new Error('missing schema-id for ' + label);
+      }
+
+      if (options.schema_output) {
+        grunt.file.write(path.resolve(options.schema_output + '/' + schema.id + '.json'), json);
+      } else {
+        tv4.addSchema(options.schema_root + '/' + schema.id, json);
+      }
+    }
+
+    function saveSchemas() {
+      return function(next) {
+        grunt.file.expand(options.schema_src).forEach(function(file) {
+          addSchema(grunt.file.read(file), file);
+        });
+
+        next();
+      };
+    }
+
     function processRaml(file) {
       return function(next) {
         raml.loadFile(file).then(function(data) {
@@ -38,10 +62,15 @@ module.exports = function(grunt) {
 
           try {
             var subtasks = [],
-                schemas = extractSchemas(data, []);
+                schemas = extractSchemas(data, []),
+                mapped = Object.keys(tv4.getSchemaMap());
 
             schemas.forEach(function(params) {
-              subtasks.push(downloadSchemas(extractRefs(params.schema)));
+              var refs = extractRefs(params.schema).filter(function(url) {
+                return -1 === mapped.indexOf(url);
+              });
+
+              subtasks.push(downloadSchemas(refs));
             });
 
             runTasks(subtasks, function() {
@@ -146,20 +175,10 @@ module.exports = function(grunt) {
                 throw new Error('missing example for ' + debug_body);
               }
 
-              var schema_json = parse(body.schema, 'schema for ' + debug_body);
-
-              if (!schema_json.id) {
-                throw new Error('missing schema-id for ' + debug_body);
-              }
-
-              if (options.schema_output) {
-                grunt.file.write(path.resolve(options.schema_output + '/' + schema_json.id + '.json'), body.schema);
-              } else {
-                tv4.addSchema(options.schema_root + '/' + schema_json.id, schema_json);
-              }
+              addSchema(body.schema, debug_body);
 
               retval.push({
-                schema: schema_json,
+                schema: parse(body.schema, 'schema for ' + debug_body),
                 example: parse(body.example, 'example for ' + debug_body),
                 method: method.method.toUpperCase(),
                 path: parts.join('')
@@ -214,6 +233,10 @@ module.exports = function(grunt) {
       grunt.log.error('missing RAML files!');
       finish(false);
     } else {
+      if (options.schema_src) {
+        subtasks.push(saveSchemas());
+      }
+
       this.filesSrc.forEach(function(file) {
         subtasks.push(processRaml(file));
       });
