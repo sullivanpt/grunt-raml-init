@@ -4,7 +4,6 @@ module.exports = function(grunt) {
       api: {
         src: ['example/index.raml'],
         options: {
-          schema_src: ['example/**/schema.json'],
           schema_root: 'http://example.com/schema'
         }
       }
