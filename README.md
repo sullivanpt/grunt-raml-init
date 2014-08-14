@@ -10,6 +10,7 @@ module.exports = function(grunt) {
       api: {
         src: ['src/index.raml'],
         options: {
+          schema_src: ['src/common/**/schema.json'],
           schema_root: 'http://domain.com/schema',
           schema_output: 'generated/schema'
         }
@@ -25,11 +26,17 @@ module.exports = function(grunt) {
 
 - **src** (array|string)
 
-  RAML files to parse
+  RAML files to parse.
+
+- **schema_src** (array|string)
+
+  JSON-schema sources to include before any validation.
+
+  The task will extract and register all schemas defined in RAML, any other schema should be resolved using this.
 
 - **schema_root** (string)
 
-  Base URI for local schemas
+  Base URI for local schemas.
 
   If given, all local schemas will be registered under that domain using its `schema-id`, then use:
 
@@ -37,11 +44,11 @@ module.exports = function(grunt) {
   { "$ref": "http://domain.com/schema/id" }
   ```
 
-  Note that **schema_output** has precedence over **schema_root**
+  Note that **schema_output** has precedence over **schema_root**.
 
 - **schema_output** (string)
 
-  Directory for saving local schemas
+  Directory for saving local schemas.
 
   If given, all local schemas will be saved to this location using its `schema-id`, then use:
 
