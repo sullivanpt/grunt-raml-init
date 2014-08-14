@@ -127,48 +127,48 @@ module.exports = function(grunt) {
 
       _.each(schema.resources, function(resource) {
         var parts = parent.concat([resource.relativeUri]),
-            route = parts.join('');
+            debug_route = parts.join('');
 
         if (!resource.methods) {
-          throw new Error('no methods given for ' + route);
+          throw new Error('no methods given for ' + debug_route);
         }
 
         _.each(resource.methods, function(method) {
-          var request = method.method.toUpperCase() + ' ' + route;
+          var debug_request = method.method.toUpperCase() + ' ' + debug_route;
 
           if (!method.responses) {
-            throw new Error('no responses given for ' + request);
+            throw new Error('no responses given for ' + debug_request);
           }
 
           _.each(method.responses, function(response, status) {
-            var result = 'on ' + request + ' [statusCode: ' + status + ']';
+            var debug_response = debug_request + ' [statusCode: ' + status + ']';
 
             if (!response) {
-              throw new Error('missing response for ' + result);
+              throw new Error('missing response for ' + debug_response);
             }
 
             if (!response.body) {
-              throw new Error('missing body for ' + result);
+              throw new Error('missing body for ' + debug_response);
             }
 
             _.each(response.body, function(body, type) {
-              var output = result + ' [Content-Type: ' + type + ']';
+              var debug_body = debug_response + ' [Content-Type: ' + type + ']';
 
               if (!body) {
-                throw new Error('missing body for ' + output);
+                throw new Error('missing body for ' + debug_body);
               }
 
               if (!body.schema) {
-                throw new Error('missing schema for ' + output);
+                throw new Error('missing schema for ' + debug_body);
               }
 
               if (!body.example) {
-                throw new Error('missing example for ' + output);
+                throw new Error('missing example for ' + debug_body);
               }
 
               retval.push({
-                schema: parse(body.schema, 'schema ' + output),
-                example: parse(body.example, 'example ' + output),
+                schema: parse(body.schema, 'schema for ' + debug_body),
+                example: parse(body.example, 'example for ' + debug_body),
                 method: method.method.toUpperCase(),
                 path: parts.join('')
               });
