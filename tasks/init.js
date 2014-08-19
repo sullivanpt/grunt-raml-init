@@ -64,7 +64,7 @@ module.exports = function(grunt) {
     function processRaml(file) {
       return function(next) {
         raml.loadFile(file).then(function(data) {
-          grunt.log.writeln('Validating schemas for ' + data.title + ' v' + data.version);
+          grunt.log.writeln('Validating schemas for ' + data.title + ' ' + data.version);
 
           try {
             var subtasks = [],
