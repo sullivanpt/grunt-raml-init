@@ -11,6 +11,10 @@ module.exports = function(grunt) {
         options = this.options(),
         finish = this.async();
 
+    function uri(value) {
+      return /^https?:\/\//.test(value);
+    }
+
     function parse(data, label) {
       try {
         return JSON.parse(data);
@@ -41,7 +45,9 @@ module.exports = function(grunt) {
       if (options.schema_output) {
         grunt.file.write(path.resolve(options.schema_output + '/' + schema.id + '.json'), json);
       } else {
-        tv4.addSchema(options.schema_root + '/' + schema.id, json);
+        var schema_uri = uri(schema.id) ? schema.id : options.schema_root + '/' + schema.id;
+
+        tv4.addSchema(schema_uri, json);
       }
     }
 
@@ -115,7 +121,7 @@ module.exports = function(grunt) {
       var retval = [];
 
       _.each(schema.properties, function(property, name) {
-        if (/^https?:\/\//.test(property['$ref'])) {
+        if (uri(property['$ref'])) {
           retval.push(property['$ref']);
         }
 
