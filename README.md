@@ -23,6 +23,12 @@ module.exports = function(grunt) {
 };
 ```
 
+## Tasks
+
+Use **raml:add** for creating empty resource files, i.e.
+
+`$ grunt raml:add --resource foo.candy.bar --dest api`
+
 ## Options
 
 - **src** (array|string)
