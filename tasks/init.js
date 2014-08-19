@@ -95,6 +95,10 @@ module.exports = function(grunt) {
     function validate(params) {
       var result = tv4.validateMultiple(params.example, params.schema);
 
+      if (params.description) {
+        grunt.log.subhead(params.description);
+      }
+
       grunt.log.writeln(params.method, params.path);
 
       if (result.valid) {
@@ -184,6 +188,7 @@ module.exports = function(grunt) {
               addSchema(body.schema, debug_body);
 
               retval.push({
+                description: method.description,
                 schema: parse(body.schema, 'schema for ' + debug_body),
                 example: parse(body.example, 'example for ' + debug_body),
                 method: method.method.toUpperCase(),
