@@ -5,7 +5,8 @@ module.exports = function(grunt) {
         tv4 = require('tv4'),
         path = require('path'),
         http = require('http'),
-        raml = require('raml-parser');
+        raml = require('raml-parser'),
+        raml2js = require('raml2js').client;
 
     var subtasks = [],
         options = this.options(),
@@ -80,6 +81,11 @@ module.exports = function(grunt) {
             });
 
             runTasks(subtasks, function() {
+              if (options.client) {
+                grunt.file.write(options.client, raml2js(data));
+                grunt.log.writeln('API-client saved at ' + options.client);
+              }
+
               schemas.forEach(validate);
               next();
             });

@@ -9,6 +9,7 @@
   "license": "MIT",
   "dependencies": {
     "raml-parser": "^0.8.7",
+    "raml2js": "^0.1.1",
     "tv4": "^1.1.0"
   },
   "devDependencies": {

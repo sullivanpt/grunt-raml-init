@@ -10,6 +10,7 @@ module.exports = function(grunt) {
       api: {
         src: ['src/index.raml'],
         options: {
+          client: 'generated/api-client.js',
           schema_src: ['src/common/**/schema.json'],
           schema_root: 'http://domain.com/schema',
           schema_output: 'generated/schema'
@@ -27,6 +28,10 @@ module.exports = function(grunt) {
 - **src** (array|string)
 
   RAML files to parse.
+
+- **client** (string)
+
+  Filepath for saving the generated api-client.
 
 - **schema_src** (array|string)
 
