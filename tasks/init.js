@@ -2,27 +2,13 @@ module.exports = function(grunt) {
   grunt.registerMultiTask('raml', function() {
 
     var _ = grunt.util._,
-        tv4 = require('tv4'),
         path = require('path'),
-        http = require('http'),
-        raml = require('raml-parser'),
-        raml2js = require('raml2js').client;
+        raml2js = require('raml2js');
 
     var subtasks = [],
+        schemas = {},
         options = this.options(),
         finish = this.async();
-
-    function uri(value) {
-      return /^https?:\/\//.test(value);
-    }
-
-    function parse(data, label) {
-      try {
-        return JSON.parse(data);
-      } catch (e) {
-        throw new Error('invalid JSON for ' + label + '\n' + e + '\n' + data);
-      }
-    }
 
     function runTasks(all, done) {
       grunt.util.async.forEach(all, function(task, callback) {
@@ -36,26 +22,22 @@ module.exports = function(grunt) {
       });
     }
 
-    function addSchema(json, label) {
-      var schema = parse(json, label);
-
-      if (!schema.id) {
-        throw new Error('missing schema-id for ' + label);
-      }
-
-      if (options.schema_output) {
-        grunt.file.write(path.resolve(options.schema_output + '/' + schema.id + '.json'), json);
-      } else {
-        var schema_uri = uri(schema.id) ? schema.id : options.schema_root + '/' + schema.id;
-
-        tv4.addSchema(schema_uri, json);
-      }
-    }
-
     function saveSchemas() {
       return function(next) {
         grunt.file.expand(options.schema_src).forEach(function(file) {
-          addSchema(grunt.file.read(file), file);
+          var json = grunt.file.read(file);
+
+          try {
+            var schema = JSON.parse(json);
+
+            if (!schema.id) {
+              throw new Error('missing schema-id for ' + file);
+            }
+
+            schemas[schema.id] = schema;
+          } catch (e) {
+            throw new Error('invalid JSON for ' + file + '\n' + e + '\n' + json);
+          }
         });
 
         next();
@@ -64,179 +46,53 @@ module.exports = function(grunt) {
 
     function processRaml(file) {
       return function(next) {
-        raml.loadFile(file).then(function(data) {
-          grunt.log.writeln('Validating schemas for ' + data.title + ' ' + data.version);
+        raml2js(file, function(err, data) {
+          if (err) {
+            return next('Error: ' + err);
+          }
 
           try {
-            var subtasks = [],
-                schemas = extractSchemas(data, []),
-                mapped = Object.keys(tv4.getSchemaMap());
+            raml2js.validate({ data: data, schemas: schemas }, function(type, obj) {
+              switch (type) {
+                case 'root':
+                  grunt.log.subhead('Validating schemas for ' + obj.title + ' ' + obj.version);
 
-            schemas.forEach(function(params) {
-              var refs = extractRefs(params.schema).filter(function(url) {
-                return -1 === mapped.indexOf(url);
-              });
+                  if (options.client) {
+                    grunt.file.write(options.client, raml2js.client(data));
+                    grunt.log.ok('API-client saved at ' + options.client);
+                  }
+                break;
 
-              subtasks.push(downloadSchemas(refs));
-            });
+                case 'label':
+                  grunt.log.subhead(obj.description);
+                break;
 
-            runTasks(subtasks, function() {
-              if (options.client) {
-                grunt.file.write(options.client, raml2js(data));
-                grunt.log.writeln('API-client saved at ' + options.client);
+                case 'error':
+                  grunt.fatal(obj.message);
+                break;
+
+                case 'success':
+                  grunt.log.ok('OK');
+                break;
+
+                case 'warning':
+                  grunt.log.warn('ERROR');
+                  grunt.log.writeln(JSON.stringify(obj.schema, null, 2));
+                break;
+
+                case 'missing':
+                  grunt.log.error('missing schema for ' + set);
+                break;
+
+                case 'resource':
+                  grunt.log.writeln(obj.method, obj.path);
+                break;
               }
-
-              schemas.forEach(validate);
-              next();
-            });
+            }, next);
           } catch (e) {
             next(e);
           }
-        }, function(err) {
-          next('Error: ' + err);
         });
-      };
-    }
-
-    function validate(params) {
-      var result = tv4.validateMultiple(params.example, params.schema);
-
-      if (params.description) {
-        grunt.log.subhead(params.description);
-      }
-
-      grunt.log.writeln(params.method, params.path);
-
-      if (result.valid) {
-        grunt.log.ok('OK');
-      } else {
-        grunt.log.warn('ERROR');
-        grunt.log.writeln(JSON.stringify(params.schema, null, 2));
-
-        if (result.errors.length) {
-          result.errors.forEach(function(err) {
-            grunt.log.error(err.message);
-          });
-        }
-      }
-
-      if (result.missing.length) {
-        result.missing.forEach(function(set) {
-          grunt.log.error('missing schema for ' + set);
-        });
-      }
-    }
-
-    function extractRefs(schema) {
-      var retval = [];
-
-      _.each(schema.properties, function(property, name) {
-        if (uri(property['$ref'])) {
-          retval.push(property['$ref']);
-        }
-
-        if (property.properties) {
-          retval = retval.concat(extractRefs(property));
-        }
-      });
-
-      return retval;
-    }
-
-    function extractSchemas(schema, parent) {
-      var retval = [];
-
-      if (!schema.resources) {
-        throw new Error('no resources given' + (parent.length ? ' for ' + parent.join('') : ''));
-      }
-
-      _.each(schema.resources, function(resource) {
-        var parts = parent.concat([resource.relativeUri]),
-            debug_route = parts.join('');
-
-        if (!resource.methods) {
-          throw new Error('no methods given for ' + debug_route);
-        }
-
-        _.each(resource.methods, function(method) {
-          var debug_request = method.method.toUpperCase() + ' ' + debug_route;
-
-          if (!method.responses) {
-            throw new Error('no responses given for ' + debug_request);
-          }
-
-          _.each(method.responses, function(response, status) {
-            var debug_response = debug_request + ' [statusCode: ' + status + ']';
-
-            if (!response) {
-              throw new Error('missing response for ' + debug_response);
-            }
-
-            if (!response.body) {
-              throw new Error('missing body for ' + debug_response);
-            }
-
-            _.each(response.body, function(body, type) {
-              var debug_body = debug_response + ' [Content-Type: ' + type + ']';
-
-              if (!body) {
-                throw new Error('missing body for ' + debug_body);
-              }
-
-              if (!body.schema) {
-                throw new Error('missing schema for ' + debug_body);
-              }
-
-              if (!body.example) {
-                throw new Error('missing example for ' + debug_body);
-              }
-
-              addSchema(body.schema, debug_body);
-
-              retval.push({
-                description: method.description,
-                schema: parse(body.schema, 'schema for ' + debug_body),
-                example: parse(body.example, 'example for ' + debug_body),
-                method: method.method.toUpperCase(),
-                path: parts.join('')
-              });
-            });
-          });
-        });
-
-        if (resource.resources) {
-          retval = retval.concat(extractSchemas(resource, parts));
-        }
-      });
-
-      return retval;
-    }
-
-    function downloadSchemas(sources) {
-      return function(next) {
-        var subtasks = [];
-
-        _.each(sources, function(url) {
-          subtasks.push(function(next) {
-            http.get(url, function(res) {
-              var body = '';
-
-              res.on('data', function(chunk) {
-                body += chunk;
-              });
-
-              res.on('end', function() {
-                tv4.addSchema(url, parse(body, url));
-                next();
-              });
-
-            }).on('error', function(err) {
-              next('cannot reach ' + url);
-            });
-          });
-        });
-
-        runTasks(subtasks, next);
       };
     }
 
