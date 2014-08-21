@@ -11,9 +11,7 @@ module.exports = function(grunt) {
         src: ['src/index.raml'],
         options: {
           client: 'generated/api-client.js',
-          schema_src: ['src/common/**/schema.json'],
-          schema_root: 'http://domain.com/schema',
-          schema_output: 'generated/schema'
+          schemas: ['src/common/**/schema.json']
         }
       }
     }
@@ -39,35 +37,11 @@ Use **raml:add** for creating empty resource files, i.e.
 
   Filepath for saving the generated api-client.
 
-- **schema_src** (array|string)
+- **schemas** (array|string)
 
   JSON-schema sources to include before any validation.
 
   The task will extract and register all schemas defined in RAML, any other schema should be resolved using this.
-
-- **schema_root** (string)
-
-  Base URI for local schemas.
-
-  If given, all local schemas will be registered under that domain using its `schema-id`, then use:
-
-  ```json
-  { "$ref": "http://domain.com/schema/id" }
-  ```
-
-  Note that **schema_output** has precedence over **schema_root**.
-
-- **schema_output** (string)
-
-  Directory for saving local schemas.
-
-  If given, all local schemas will be saved to this location using its `schema-id`, then use:
-
-  ```json
-  { "$ref": "http://localhost:8000/schema/id.json" }
-  ```
-
-  For this you're required to serve the schemas using a local web-server.
 
 ## Best practices
 

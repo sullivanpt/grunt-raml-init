@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/schema",
+  "id": "http://example.com/schema/person",
   "title": "Example Schema",
   "type": "object",
-  "id": "person",
   "properties": {
     "firstName": {
       "type": "string"

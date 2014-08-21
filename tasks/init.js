@@ -3,7 +3,7 @@ module.exports = function(grunt) {
 
     var _ = grunt.util._,
         path = require('path'),
-        raml2js = require('raml2js');
+        raml4js = require('raml4js');
 
     var subtasks = [],
         schemas = {},
@@ -24,7 +24,7 @@ module.exports = function(grunt) {
 
     function saveSchemas() {
       return function(next) {
-        grunt.file.expand(options.schema_src).forEach(function(file) {
+        grunt.file.expand(options.schemas).forEach(function(file) {
           var json = grunt.file.read(file);
 
           try {
@@ -46,19 +46,19 @@ module.exports = function(grunt) {
 
     function processRaml(file) {
       return function(next) {
-        raml2js(file, function(err, data) {
+        raml4js(file, function(err, data) {
           if (err) {
             return next('Error: ' + err);
           }
 
           try {
-            raml2js.validate({ data: data, schemas: schemas }, function(type, obj) {
+            raml4js.validate({ data: data, schemas: schemas }, function(type, obj) {
               switch (type) {
                 case 'root':
                   grunt.log.subhead('Validating schemas for ' + obj.title + ' ' + obj.version);
 
                   if (options.client) {
-                    grunt.file.write(options.client, raml2js.client(data));
+                    grunt.file.write(options.client, 'module.exports = ' + raml4js.client(data).toString() + ';');
                     grunt.log.ok('API-client saved at ' + options.client);
                   }
                 break;
@@ -81,7 +81,7 @@ module.exports = function(grunt) {
                 break;
 
                 case 'missing':
-                  grunt.log.error('missing schema for ' + set);
+                  grunt.log.error('missing schema for ' + obj);
                 break;
 
                 case 'resource':
@@ -96,17 +96,11 @@ module.exports = function(grunt) {
       };
     }
 
-    // - save local schemas
-    // - parse raml definitions
-    // - extract all json-schemas
-    // - extract all $ref's and download
-    // - validate everything!
-
     if (!this.filesSrc.length) {
       grunt.log.error('missing RAML files!');
       finish(false);
     } else {
-      if (options.schema_src) {
+      if (options.schemas) {
         subtasks.push(saveSchemas());
       }
 
