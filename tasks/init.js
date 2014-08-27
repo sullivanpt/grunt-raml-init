@@ -16,6 +16,7 @@ module.exports = function(grunt) {
       }, function(err) {
         if (err) {
           grunt.log.error(err);
+          return done(err);
         }
 
         done();
@@ -48,7 +49,7 @@ module.exports = function(grunt) {
       return function(next) {
         raml4js(file, function(err, data) {
           if (err) {
-            return next('Error: ' + err);
+            return next(err);
           }
 
           try {
@@ -88,7 +89,17 @@ module.exports = function(grunt) {
                   grunt.log.writeln(obj.method, obj.path);
                 break;
               }
-            }, next);
+            }, function (err) {
+              // ignore these errors. the raml4js module is too aggressive
+              if (err.toString().indexOf('Error: missing schema ') === 0 ||
+                err.toString().indexOf('Error: missing example ') === 0 ||
+                err.toString().indexOf('Error: invalid JSON ') === 0) {
+                grunt.log.writeln(err);
+                next();
+              } else {
+                next(err);
+              }
+            });
           } catch (e) {
             next(e);
           }
