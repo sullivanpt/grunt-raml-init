@@ -91,7 +91,10 @@ module.exports = function(grunt) {
               }
             }, function (err) {
               // ignore these errors. the raml4js module is too aggressive
-              if (err.toString().indexOf('Error: missing schema ') === 0 ||
+              if (err.toString().indexOf('Error: no responses given ') === 0 ||
+                err.toString().indexOf('Error: missing response ') === 0 ||
+                err.toString().indexOf('Error: missing body ') === 0 ||
+                err.toString().indexOf('Error: missing schema ') === 0 ||
                 err.toString().indexOf('Error: missing example ') === 0 ||
                 err.toString().indexOf('Error: invalid JSON ') === 0) {
                 grunt.log.writeln(err);
